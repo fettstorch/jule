@@ -36,3 +36,21 @@ const observable = new Observable<number>()
 observable.subscribe(value => console.log(value))
 observable.emit(1)
 ```
+
+### once
+```ts
+import { once } from '@fettstorch/jule'
+const computationHeavyStuff = once(() => computationHeavyStuff())
+```
+
+### Once
+```ts
+import { Once } from '@fettstorch/jule'
+class TestClass {
+    @Once
+    get foo() {
+        const result = computationHeavyStuff()
+        return 1
+    }
+}
+```
