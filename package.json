@@ -1,6 +1,6 @@
 {
   "name": "@fettstorch/jule",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Some general JS/TS utils",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
@@ -12,7 +12,9 @@
       "types": "./dist/esm/index.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "bun run build:esm && bun run build:cjs",
     "build:esm": "tsc -p tsconfig.esm.json",
@@ -24,7 +26,9 @@
     "update-deps": "bunx npm-upgrade",
     "prepack": "bun run build && bun run test -- --run"
   },
-  "keywords": ["utils"],
+  "keywords": [
+    "utils"
+  ],
   "author": "Julian Müller",
   "license": "ISC",
   "devDependencies": {
