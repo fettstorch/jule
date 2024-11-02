@@ -1,5 +1,5 @@
 {
-  "name": "jule",
+  "name": "@fettstorch/jule",
   "version": "0.1.0",
   "description": "Some general JS/TS utils",
   "main": "./dist/cjs/index.js",
