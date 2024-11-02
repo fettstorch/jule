@@ -12,11 +12,14 @@
       },
       "suspicious": {
         "noExplicitAny": "warn",
-        "noConsoleLog": "warn"
+        "noConsoleLog": "warn",
+        "noImplicitAnyLet": "off"
       },
       "style": {
         "useConst": "error",
-        "useTemplate": "error"
+        "useTemplate": "error",
+        "useSingleVarDeclarator": "off",
+        "noNonNullAssertion": "off"
       }
     }
   },
