@@ -3,6 +3,9 @@
   "organizeImports": {
     "enabled": true
   },
+  "files": {
+    "ignore": ["dist/**/*"]
+  },
   "linter": {
     "enabled": true,
     "rules": {
@@ -13,7 +16,8 @@
       "suspicious": {
         "noExplicitAny": "warn",
         "noConsoleLog": "warn",
-        "noImplicitAnyLet": "off"
+        "noImplicitAnyLet": "off",
+        "noConfusingVoidType": "off"
       },
       "style": {
         "useConst": "error",
