@@ -1,0 +1,35 @@
+{
+  "name": "jule",
+  "version": "0.1.0",
+  "description": "Some general JS/TS utils",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/esm/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "bun run build:esm && bun run build:cjs",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "test": "vitest",
+    "format": "biome format --write .",
+    "lint": "biome lint .",
+    "check": "biome check --apply .",
+    "update-deps": "bunx npm-upgrade",
+    "prepack": "bun run build && bun run test -- --run"
+  },
+  "keywords": ["utils"],
+  "author": "Julian Müller",
+  "license": "ISC",
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "bun": "^1.1.34",
+    "vitest": "^2.1.4"
+  }
+}
