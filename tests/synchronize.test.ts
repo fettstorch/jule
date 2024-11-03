@@ -26,7 +26,7 @@ describe('synchronize', () => {
     }
     const syncedFoo = synchronize(foo, lock)
     const syncedBar = synchronize(bar, lock)
-    await Promise.all([syncedFoo(), syncedBar()])
-    expect(val).toEqual(2)
+    await Promise.all([syncedBar(), syncedFoo()])
+    expect(val).toEqual(1)
   })
 })

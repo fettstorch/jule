@@ -15,10 +15,10 @@ import type { Func } from './types/Func'
  * const syncedFoo = synchronize(foo, lock)
  * const syncedBar = synchronize(bar, lock)
  *
- * syncedFoo()
  * syncedBar()
+ * syncedFoo()
  *
- * console.log(val) // 2
+ * console.log(val) // 1
  * ```
  */
 export function synchronize<This, Args extends unknown[] = void[], Return = void>(
