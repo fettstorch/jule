@@ -1,6 +1,6 @@
 {
   "name": "@fettstorch/jule",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Some general JS/TS utils",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
@@ -16,7 +16,9 @@
     "type": "git",
     "url": "https://github.com/schnullerpip/jule.git"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "bun run build:esm && bun run build:cjs",
     "build:esm": "tsc -p tsconfig.esm.json",
@@ -28,7 +30,9 @@
     "update-deps": "bunx npm-upgrade",
     "prepack": "bun run build && bun run test -- --run"
   },
-  "keywords": ["utils"],
+  "keywords": [
+    "utils"
+  ],
   "author": "Julian Müller",
   "license": "ISC",
   "devDependencies": {
