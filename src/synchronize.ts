@@ -5,6 +5,8 @@ import type { Func } from './types/Func'
  * @param action - function to synchronize
  * @param lock - object to use as a lock - defaults to the action function
  * @returns a function that will execute the given function in order
+ * In case a lock is provided, the internally created queue will be cleaned up
+ * when the lock is no longer referenced (weak reference)
  *
  * @example
  * ```typescript
