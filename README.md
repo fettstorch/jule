@@ -88,3 +88,11 @@ syncedBar()
 syncedFoo()
 //await bar -> result is 1 as syncedFoo will definitely be executed after syncedBar
 ```
+
+### mapValues
+```ts
+import { mapValues } from '@fettstorch/jule'
+const originalMap = new Map([['a', 1], ['b', 2]])
+const transformedMap = mapValues(originalMap, (value) => value.toString())
+// transformedMap is now a new Map([['a', '1'], ['b', '2']])
+```
