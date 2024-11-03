@@ -16,9 +16,7 @@
     "type": "git",
     "url": "https://github.com/schnullerpip/jule.git"
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "scripts": {
     "build": "bun run build:esm && bun run build:cjs",
     "build:esm": "tsc -p tsconfig.esm.json",
@@ -30,9 +28,7 @@
     "update-deps": "bunx npm-upgrade",
     "prepack": "bun run build && bun run test -- --run"
   },
-  "keywords": [
-    "utils"
-  ],
+  "keywords": ["typescript", "utils", "when"],
   "author": "Julian Müller",
   "license": "ISC",
   "devDependencies": {
