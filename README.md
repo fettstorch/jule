@@ -14,11 +14,12 @@ bun add @fettstorch/jule
 ### when
 ```ts
 import { when } from '@fettstorch/jule'
-function foo(case: number): string {
+function foo(case: number | undefined): string {
     return when(case)({
-        1: () => 'one',
+        1: 'one',
         2: () => 'two',
-        else: () => 'something else'
+        3: (c) => `three ${c}`,
+        else: (c) => `something else ${c}`
     })
 }
 ```
@@ -26,7 +27,10 @@ function foo(case: number): string {
 ### awaitable
 ```ts
 import { awaitable } from '@fettstorch/jule'
-const { promise, resolve } = awaitable()
+const { promise, resolve } = awaitable<number>()
+await promise
+// somewhere else
+resolve(42)
 ```
 
 ### Observable
@@ -37,12 +41,12 @@ observable.subscribe(value => console.log(value))
 observable.emit(1)
 ```
 
-### once
+### once (lazy)
 ```ts
 import { once } from '@fettstorch/jule'
 const cachedAction = once(() => computationHeavyStuff())
-cachedAction()
-cachedAction() // will only execute computationHeavyStuff once
+cachedAction() // heavy computation happens here lazily
+cachedAction() // will return the cached result instead of running the heavy computation again
 ```
 
 ### sleep
@@ -53,13 +57,23 @@ await sleep(1000)
 
 ### debounce
 ```ts
-import { getDebouncer } from '@fettstorch/jule'
-const { debounce } = getDebouncer()
+import { debounce } from '@fettstorch/jule'
 const action = () => console.log('action')
-const debouncedAction = debounce(action, 1000)
+debounce(action, 1000)
+debounce(action, 1000)
+debounce(action, 1000) // will log 'action' once after 1 second
+// OR
+import { debounced } from '@fettstorch/jule'
+const debouncedAction = debounced(action, 1000)
 debouncedAction()
 debouncedAction()
 debouncedAction() // will log 'action' once after 1 second
+// OR
+import { debounce } from '@fettstorch/jule'
+const action1 = () => console.log('action1')
+const action2 = () => console.log('action2')
+debounce(action1, 1000) // will be forgotten in favor of action2
+debounce(action2, 1000) // action2 will be logged after 1 second
 ```
 ### synchronize
 ```ts

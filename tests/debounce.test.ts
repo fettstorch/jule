@@ -1,23 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { awaitable } from '../src/awaitable'
-import { Debounced, getDebouncer } from '../src/debounce'
+import { debounce, debounced } from '../src/debounce'
 
 describe('debounce', () => {
   it('should never execute a callback multiple times if the handler is called multiple times within the delay', async () => {
-    const { debounce } = getDebouncer()
-
     let state = 0
     const { promise, resolve } = awaitable()
 
-    const callback = () => {
+    const action = () => {
       state++
-      resolve(undefined)
+      resolve()
     }
-    const handler = () => debounce(callback, 0)
+    const debouncedAction = debounced(action, 0)
 
-    handler()
-    handler()
-    handler()
+    debouncedAction()
+    debouncedAction()
+    debouncedAction()
 
     await promise
     expect(state).toEqual(1)
@@ -25,7 +23,6 @@ describe('debounce', () => {
 
   it('should allow a handler to be called again after the delay', async () => {
     const { promise, resolve: res } = awaitable()
-    const { debounce } = getDebouncer()
     let resolve = res
 
     let state = 0
