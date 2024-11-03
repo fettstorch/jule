@@ -3,6 +3,23 @@ import { awaitable } from '../src/awaitable'
 import { debounce, debounced } from '../src/debounce'
 
 describe('debounce', () => {
+  it('should allow for different functions to debounce on the same timer', async () => {
+    const { promise, resolve } = awaitable()
+    const lock = {}
+    let state = 0
+    const fn1 = () => {
+      state++
+      resolve()
+    }
+    const fn2 = () => {
+      state++
+      resolve()
+    }
+    debounce(fn1, 10, lock)
+    debounce(fn2, 10, lock) // only fn2 will be executed after 1000ms
+    await promise
+    expect(state).toEqual(1)
+  })
   it('should never execute a callback multiple times if the handler is called multiple times within the delay', async () => {
     let state = 0
     const { promise, resolve } = awaitable()

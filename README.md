@@ -70,10 +70,11 @@ debouncedAction()
 debouncedAction() // will log 'action' once after 1 second
 // OR
 import { debounce } from '@fettstorch/jule'
+const lock = {}
 const action1 = () => console.log('action1')
 const action2 = () => console.log('action2')
-debounce(action1, 1000) // will be forgotten in favor of action2
-debounce(action2, 1000) // action2 will be logged after 1 second
+debounce(action1, 1000, lock) // will be forgotten in favor of action2
+debounce(action2, 1000, lock) // action2 will be logged after 1 second
 ```
 ### synchronize
 ```ts
