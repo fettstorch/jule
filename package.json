@@ -19,14 +19,15 @@
   "files": ["dist"],
   "scripts": {
     "build": "bun run build:esm && bun run build:cjs",
-    "build:esm": "tsc -p tsconfig.esm.json",
-    "build:cjs": "tsc -p tsconfig.cjs.json",
-    "test": "vitest",
+    "build:esm": "bunx tsc -p tsconfig.esm.json",
+    "build:cjs": "bunx tsc -p tsconfig.cjs.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "format": "biome format --write .",
     "lint": "biome lint .",
     "check": "biome check --apply .",
     "update-deps": "bunx npm-upgrade",
-    "prepack": "bun run build && bun run test -- --run"
+    "prepack": "bun run build && bun run test"
   },
   "keywords": ["typescript", "utils", "when"],
   "author": "Julian Müller",
