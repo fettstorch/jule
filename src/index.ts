@@ -1,5 +1,5 @@
 export { when } from './when'
-export { awaitable, subject } from './awaitable'
+export { awaitable, Awaitable, subject } from './awaitable'
 export { Observable } from './observable'
 export type { Satisfies } from './types/Satisfies'
 export type { Func } from './types/Func'

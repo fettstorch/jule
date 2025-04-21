@@ -26,11 +26,11 @@ function foo(case: number | undefined): string {
 
 ### awaitable
 ```ts
-import { awaitable } from '@fettstorch/jule'
-const { promise, resolve } = awaitable<number>()
+import { awaitable, Awaitable } from '@fettstorch/jule'
+const promise: Awaitable = awaitable<number>()
 await promise
 // somewhere else
-resolve(42)
+promise.resolve(42)
 ```
 
 ### Observable

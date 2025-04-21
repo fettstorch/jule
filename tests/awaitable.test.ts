@@ -3,19 +3,19 @@ import { awaitable, subject } from '../src/awaitable'
 
 describe('Awaitable', () => {
   it('should resolve', async () => {
-    const { promise, resolve } = awaitable<number>()
+    const promise = awaitable<number>()
     promise.then((a) => {
       expect(a).toBe(1)
     })
-    resolve(1)
+    promise.resolve(1)
   })
 
   it('should reject', () => {
-    const { promise, reject } = awaitable()
+    const promise = awaitable()
     promise.catch((e) => {
       expect(e).toBe('error')
     })
-    reject('error')
+    promise.reject('error')
   })
 })
 
@@ -27,16 +27,16 @@ describe('Subject', () => {
     })
 
     it('should be resolved when promise resolves', async () => {
-      const { status, promise, resolve } = subject()
+      const { status, resolve } = subject()
       resolve()
-      await promise
+      await subject()
       expect(status()).toBe('resolved')
     })
 
     it('should be rejected when promise rejects', async () => {
-      const { status, promise, reject } = subject()
+      const { status, reject } = subject()
       reject('error')
-      await promise.catch(() => {})
+      await subject()
       expect(status()).toBe('rejected')
     })
   })
