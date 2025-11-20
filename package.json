@@ -16,7 +16,9 @@
     "type": "git",
     "url": "https://github.com/schnullerpip/jule.git"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "bun run build:esm && bun run build:cjs",
     "build:esm": "bunx tsc -p tsconfig.esm.json",
@@ -29,12 +31,17 @@
     "update-deps": "bunx npm-upgrade",
     "prepack": "bun run build && bun run test"
   },
-  "keywords": ["typescript", "utils", "when"],
+  "keywords": [
+    "typescript",
+    "utils",
+    "when"
+  ],
   "author": "Julian Müller",
   "license": "ISC",
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "bun": "^1.1.34",
-    "vitest": "^2.1.4"
-  }
+    "bun": "^1.3.2",
+    "vitest": "^4.0.12"
+  },
+  "packageManager": "bun@1.3.2"
 }
