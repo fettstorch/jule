@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { awaitable } from '../src/awaitable'
 import { debounce, debounced } from '../src/debounce'
 

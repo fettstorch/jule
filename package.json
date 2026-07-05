@@ -2,6 +2,20 @@
   "name": "@fettstorch/jule",
   "version": "1.5.3",
   "description": "Some general JS/TS utils",
+  "keywords": [
+    "typescript",
+    "utils",
+    "when"
+  ],
+  "license": "ISC",
+  "author": "Julian Müller",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schnullerpip/jule.git"
+  },
+  "files": [
+    "dist"
+  ],
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
   "types": "./dist/esm/index.d.ts",
@@ -12,35 +26,22 @@
       "types": "./dist/esm/index.d.ts"
     }
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/schnullerpip/jule.git"
-  },
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "build": "bun run build:esm && bun run build:cjs",
     "build:esm": "bunx tsc -p tsconfig.esm.json",
     "build:cjs": "bunx tsc -p tsconfig.cjs.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "format": "biome format --write .",
-    "lint": "biome lint .",
-    "check": "biome check --apply .",
+    "format": "oxfmt",
+    "lint": "oxlint",
+    "check": "oxfmt && oxlint --fix",
     "update-deps": "bunx npm-upgrade",
     "prepack": "bun run build && bun run test"
   },
-  "keywords": [
-    "typescript",
-    "utils",
-    "when"
-  ],
-  "author": "Julian Müller",
-  "license": "ISC",
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
     "bun": "^1.3.2",
+    "oxfmt": "^0.57.0",
+    "oxlint": "^1.72.0",
     "vitest": "^4.0.12"
   },
   "packageManager": "bun@1.3.2"

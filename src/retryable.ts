@@ -1,4 +1,4 @@
-import { sleep } from "./sleep";
+import { sleep } from './sleep'
 
 /**
  *
@@ -25,37 +25,39 @@ import { sleep } from "./sleep";
  *
  * @returns the result of the function
  */
-export function retryable<T>(handler: (context: { retry: RetryCommand; tryCount: number }) => T): T {
-    function withRetry(tryCount: number): T {
-        try {
-            const result = handler({
-                retry: ({ backoffMs }) => {
-                    throw new Retry(backoffMs)
-                },
-                tryCount,
-            })
+export function retryable<T>(
+  handler: (context: { retry: RetryCommand; tryCount: number }) => T
+): T {
+  function withRetry(tryCount: number): T {
+    try {
+      const result = handler({
+        retry: ({ backoffMs }) => {
+          throw new Retry(backoffMs)
+        },
+        tryCount
+      })
 
-            // case result is a promise
-            if (result instanceof Promise) {
-                return result.catch((error) => {
-                    if (isRetryable(error)) {
-                        return sleep(error.backoffMs).then(() => withRetry(tryCount + 1))
-                    }
-                    return Promise.reject(error)
-                }) as T
-            }
+      // case result is a promise
+      if (result instanceof Promise) {
+        return result.catch((error) => {
+          if (isRetryable(error)) {
+            return sleep(error.backoffMs).then(() => withRetry(tryCount + 1))
+          }
+          return Promise.reject(error)
+        }) as T
+      }
 
-            // case not a promise
-            return result
-        } catch (error: unknown) {
-            if (isRetryable(error)) {
-                return withRetry(tryCount + 1)
-            }
-            throw error
-        }
+      // case not a promise
+      return result
+    } catch (error: unknown) {
+      if (isRetryable(error)) {
+        return withRetry(tryCount + 1)
+      }
+      throw error
     }
+  }
 
-    return withRetry(1)
+  return withRetry(1)
 }
 
 //--- module private
@@ -63,12 +65,12 @@ export function retryable<T>(handler: (context: { retry: RetryCommand; tryCount:
 type RetryCommand = (args: { backoffMs: number }) => never
 
 function isRetryable(error: unknown): error is Retry {
-    return error instanceof Retry
+  return error instanceof Retry
 }
 
 class Retry extends Error {
-    constructor(readonly backoffMs: number) {
-        super('retry')
-        Object.setPrototypeOf(this, Retry.prototype)
-    }
+  constructor(readonly backoffMs: number) {
+    super('retry')
+    Object.setPrototypeOf(this, Retry.prototype)
+  }
 }

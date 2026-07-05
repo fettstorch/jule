@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { Once, once } from '../src/once'
+
+import { once } from '../src/once'
 
 describe('once', () => {
   it('should keep exact return values and not reduce null to undefined', () => {

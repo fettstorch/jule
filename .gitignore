@@ -27,6 +27,7 @@ node_modules/
 !.vscode/settings.json
 .zed/*
 !.zed/debug.json
+!.zed/settings.json
 *.code-workspace
 
 # Logs

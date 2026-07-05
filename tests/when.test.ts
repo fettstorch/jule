@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { when } from '../src/when'
 
 describe('when', () => {

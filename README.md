@@ -5,6 +5,7 @@ A collection of TypeScript utilities I use in my projects.
 ## Installation
 
 Using bun:
+
 ```bash
 bun add @fettstorch/jule
 ```
@@ -12,6 +13,7 @@ bun add @fettstorch/jule
 ## Usage examples
 
 ### when
+
 ```ts
 import { when } from '@fettstorch/jule'
 function foo(case: number | undefined): string {
@@ -25,6 +27,7 @@ function foo(case: number | undefined): string {
 ```
 
 ### awaitable
+
 ```ts
 import { awaitable, Awaitable } from '@fettstorch/jule'
 const promise: Awaitable = awaitable<number>()
@@ -34,14 +37,16 @@ promise.resolve(42)
 ```
 
 ### Observable
+
 ```ts
 import { Observable } from '@fettstorch/jule'
 const observable = new Observable<number>()
-observable.subscribe(value => console.log(value))
+observable.subscribe((value) => console.log(value))
 observable.emit(1)
 ```
 
 ### once (lazy)
+
 ```ts
 import { once } from '@fettstorch/jule'
 const cachedAction = once(() => computationHeavyStuff())
@@ -50,6 +55,7 @@ cachedAction() // will return the cached result instead of running the heavy com
 ```
 
 ### cached (lazy)
+
 ```ts
 import { cached } from '@fettstorch/jule'
 // like `once`, but keyed per-argument and with optional time-based eviction
@@ -60,7 +66,7 @@ fetchUser(2) // different argument -> runs the lookup again
 
 // manual eviction: drop one entry, or clear the whole cache
 fetchUser.evict(1) // next fetchUser(1) recomputes
-fetchUser.clear()  // drops every cached entry
+fetchUser.clear() // drops every cached entry
 
 // evict after a time-to-live (ms); recomputes once the ttl has elapsed
 const now = cached(() => Date.now(), { ttlMs: 1000 })
@@ -77,7 +83,7 @@ byShape({ id: 1 }) // cached: a fresh but equal object hits the same entry
 const byRef = cached((p: { id: number }) => expensiveLookup(p.id), { mode: 'identity' })
 const p = { id: 1 }
 byRef(p)
-byRef(p)        // cached: same reference
+byRef(p) // cached: same reference
 byRef({ id: 1 }) // recomputes: different reference
 
 // opt into shared state by passing an explicit cache (and optionally a cacheKey)
@@ -87,12 +93,14 @@ const b = cached(computeB, { cache: store, cacheKey: 'b' })
 ```
 
 ### sleep
+
 ```ts
 import { sleep } from '@fettstorch/jule'
 await sleep(1000)
 ```
 
 ### debounce
+
 ```ts
 import { debounce } from '@fettstorch/jule'
 const action = () => console.log('action')
@@ -113,13 +121,20 @@ const action2 = () => console.log('action2')
 debounce(action1, 1000, lock) // will be forgotten in favor of action2
 debounce(action2, 1000, lock) // action2 will be logged after 1 second
 ```
+
 ### synchronize
+
 ```ts
 import { synchronize } from '@fettstorch/jule'
 let result = 0
 const lock = {}
-const foo = () => { result = 1 }
-const bar = async () => { await sleep(1000); result = 2 }
+const foo = () => {
+  result = 1
+}
+const bar = async () => {
+  await sleep(1000)
+  result = 2
+}
 const syncedFoo = synchronize(foo, lock)
 const syncedBar = synchronize(bar, lock)
 syncedBar()
@@ -128,9 +143,13 @@ syncedFoo()
 ```
 
 ### toMap
+
 ```ts
 import { toMap } from '@fettstorch/jule'
-const originalMap = new Map([['a', 1], ['b', 2]])
+const originalMap = new Map([
+  ['a', 1],
+  ['b', 2]
+])
 const newMap = toMap(originalMap, ([key, value]) => [key, value.toString()])
 // newMap is now a new Map([['a', '1'], ['b', '2']])
 

@@ -1,4 +1,4 @@
-import { Func } from "./types/Func";
+import { Func } from './types/Func'
 
 /**
  * Wraps a function so its result is computed lazily and then reused on
@@ -47,81 +47,78 @@ import { Func } from "./types/Func";
 export function cached<
   This,
   TargetFunctionArgs extends unknown[] = void[],
-  TargetFunctionReturnType = void,
+  TargetFunctionReturnType = void
 >(
   originalFunction: Func<This, TargetFunctionArgs, TargetFunctionReturnType>,
   config?: Partial<{
-    ttlMs: number;
-    cache: Cache<TargetFunctionReturnType>;
-    cacheKey: PropertyKey;
-    timeProvider: { now: () => number };
-    mode: Mode;
-  }>,
+    ttlMs: number
+    cache: Cache<TargetFunctionReturnType>
+    cacheKey: PropertyKey
+    timeProvider: { now: () => number }
+    mode: Mode
+  }>
 ) {
   // default is function local cache
   // this elegantly avoids namespace collisions
-  const functionLocalCache: Cache<TargetFunctionReturnType> = {};
+  const functionLocalCache: Cache<TargetFunctionReturnType> = {}
 
   const { ttlMs, cache, cacheKey, timeProvider, mode } = {
     ttlMs: Infinity,
     cache: functionLocalCache,
     cacheKey: defaultCacheKey,
     timeProvider: Date,
-    mode: "structural" as Mode,
-    ...config,
-  };
+    mode: 'structural' as Mode,
+    ...config
+  }
 
   const cachedFunction = function (
     this: This,
     ...args: TargetFunctionArgs
   ): TargetFunctionReturnType {
-    const key = createKey(args);
+    const key = createKey(args)
 
-    const cachedValue = cache[key];
+    const cachedValue = cache[key]
 
-    const updateTime = timeProvider.now();
+    const updateTime = timeProvider.now()
 
-    const needsUpdate =
-      !cachedValue || updateTime - cachedValue.updateTime > ttlMs;
+    const needsUpdate = !cachedValue || updateTime - cachedValue.updateTime > ttlMs
 
     if (needsUpdate) {
       cache[key] = {
         val: originalFunction.apply(this, args),
-        updateTime,
-      };
+        updateTime
+      }
     }
 
-    return cache[key].val;
-  };
+    return cache[key].val
+  }
 
   cachedFunction.evict = function (...args: TargetFunctionArgs) {
-    delete cache[createKey(args)];
-  };
+    delete cache[createKey(args)]
+  }
 
   cachedFunction.clear = function () {
     for (const key of Object.keys(cache)) {
-      delete cache[key];
+      delete cache[key]
     }
-  };
+  }
 
-  return cachedFunction;
+  return cachedFunction
 
   // --- key derivation (object args depend on config.mode) ---
   function createKey(args: unknown[]) {
-    return `${String(cacheKey)}-${createArgsKey(args)}`;
+    return `${String(cacheKey)}-${createArgsKey(args)}`
   }
 
   function createArgsKey(args: unknown[]) {
     return [...args]
       .map((a) => {
-        if (!!a && typeof a === "object") {
-          return mode === "identity"
-            ? getUniqueIdentifierForObject(a)
-            : JSON.stringify(a);
+        if (!!a && typeof a === 'object') {
+          return mode === 'identity' ? getUniqueIdentifierForObject(a) : JSON.stringify(a)
         }
-        return String(a);
+        return String(a)
       })
-      .join(",");
+      .join(',')
   }
 }
 
@@ -132,22 +129,19 @@ export function cached<
 // this is in order to properly be able to distinguish different object args
 // as different arguments. Otherwise stringifying objects is just "[Object object]"
 const getUniqueIdentifierForObject = (() => {
-  const objectArgMap = new WeakMap<object, number>();
-  let objectIdentityCounter = 0;
+  const objectArgMap = new WeakMap<object, number>()
+  let objectIdentityCounter = 0
   return (o: object) => {
-    let identity = objectArgMap.get(o);
+    let identity = objectArgMap.get(o)
     if (!identity) {
-      identity = ++objectIdentityCounter;
-      objectArgMap.set(o, identity);
+      identity = ++objectIdentityCounter
+      objectArgMap.set(o, identity)
     }
-    return identity;
-  };
-})();
+    return identity
+  }
+})()
 
 // --- caching ---
-const defaultCacheKey = Symbol("jule-cached-function-util-deafult-cache-key");
-type Cache<CachedValue> = Record<
-  PropertyKey,
-  { val: CachedValue; updateTime: number }
->;
-type Mode = "structural" | "identity";
+const defaultCacheKey = Symbol('jule-cached-function-util-deafult-cache-key')
+type Cache<CachedValue> = Record<PropertyKey, { val: CachedValue; updateTime: number }>
+type Mode = 'structural' | 'identity'

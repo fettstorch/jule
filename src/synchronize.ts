@@ -42,5 +42,6 @@ export function synchronize<This, Args extends unknown[] = void[], Return = void
 
 const queues = new WeakMap<
   object | (() => unknown),
+  // oxlint-disable-next-line typescript/no-explicit-any
   ReturnType<typeof promiseQueue<any>>['enqueue']
 >()

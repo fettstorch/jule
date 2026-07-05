@@ -30,6 +30,7 @@ export function awaitable<T = void>(): Awaitable<T> {
   })
 
   return {
+    // oxlint-disable-next-line unicorn/no-thenable -- awaitable is intentionally a thenable
     then: promise.then.bind(promise),
     catch: promise.catch.bind(promise),
     finally: promise.finally.bind(promise),

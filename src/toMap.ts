@@ -26,7 +26,7 @@ export function toMap<V, NK, NV>(
   elements: Iterable<V> | Record<string, V>,
   transform: ((el: V, idx: number) => [NK, NV]) | ((el: [string, V], idx: number) => [NK, NV])
 ): Map<NK, NV> {
-  const iterable = Symbol.iterator in elements ? [...elements] : [...Object.entries(elements)]
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  const iterable = Symbol.iterator in elements ? [...elements] : Object.entries(elements)
+  // oxlint-disable-next-line typescript/no-explicit-any -- transform union needs a single call signature
   return new Map(iterable.map(transform as any))
 }

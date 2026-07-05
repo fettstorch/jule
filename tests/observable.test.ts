@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { Observable } from '../src/observable'
 
 describe('Observable', () => {

@@ -1,14 +1,14 @@
-export { when } from "./when";
-export { awaitable, Awaitable, subject } from "./awaitable";
-export { Observable } from "./observable";
-export type { Satisfies } from "./types/Satisfies";
-export type { Func } from "./types/Func";
-export { Once, once } from "./once";
-export { cached } from "./cached";
-export { sleep } from "./sleep";
-export { synchronize } from "./synchronize";
-export { promiseQueue } from "./promise";
-export { debounce, debounced, getDebouncer, Debounced } from "./debounce";
-export { toMap } from "./toMap";
-export type { SizedArray } from "./types/SizedArray";
-export { retryable } from "./retryable";
+export { when } from './when'
+export { awaitable, Awaitable, subject } from './awaitable'
+export { Observable } from './observable'
+export type { Satisfies } from './types/Satisfies'
+export type { Func } from './types/Func'
+export { Once, once } from './once'
+export { cached } from './cached'
+export { sleep } from './sleep'
+export { synchronize } from './synchronize'
+export { promiseQueue } from './promise'
+export { debounce, debounced, getDebouncer, Debounced } from './debounce'
+export { toMap } from './toMap'
+export type { SizedArray } from './types/SizedArray'
+export { retryable } from './retryable'

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { sleep } from '../src/sleep'
 import { synchronize } from '../src/synchronize'
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { awaitable, subject } from '../src/awaitable'
 
 describe('Awaitable', () => {

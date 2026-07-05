@@ -48,6 +48,7 @@ export function when<Case extends PropertyKey | undefined>(
   c: Case
 ): <Ret>(cases: Cases<Case, Ret>) => Ret {
   return <R>(cases: Cases<Case, R>): R => {
+    // oxlint-disable-next-line typescript/no-explicit-any
     const elseHandler = (cases as any).else
     const safeAccessor = c as unknown as Exclude<Case, undefined>
 
