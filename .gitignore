@@ -25,6 +25,8 @@ node_modules/
 !.vscode/extensions.json
 !.vscode/launch.json
 !.vscode/settings.json
+.zed/*
+!.zed/debug.json
 *.code-workspace
 
 # Logs
@@ -60,4 +62,4 @@ bun.lockb
 
 # TypeScript
 *.tsbuildinfo
-.tsbuildinfo 
+.tsbuildinfo
