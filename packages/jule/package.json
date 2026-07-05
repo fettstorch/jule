@@ -1,6 +1,6 @@
 {
   "name": "@fettstorch/jule",
-  "version": "1.5.3",
+  "version": "3.0.0",
   "description": "Some general JS/TS utils",
   "keywords": [
     "typescript",
