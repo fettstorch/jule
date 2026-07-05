@@ -34,6 +34,13 @@ import { Func } from './types/Func'
  * @returns a function with the same signature as `originalFunction` that
  * returns the cached (or freshly computed) result.
  *
+ * @remarks
+ * Errors are not handled: if `originalFunction` throws, the error propagates
+ * to the caller unchanged and nothing is written to the cache. Failures are
+ * therefore never memoized — the next call retries. When a stale entry's
+ * refresh (past `ttlMs`) throws, the error surfaces rather than the stale
+ * value, and the entry is left untouched for the next call to retry.
+ *
  * @example
  * const fetchUser = cached((id: number) => expensiveLookup(id))
  * fetchUser(1) // runs the lookup

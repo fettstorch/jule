@@ -381,4 +381,64 @@ describe('cached', () => {
       expect(() => cachedFunction(circular)).toThrow()
     })
   })
+
+  describe('error handling', () => {
+    it('should let the original error surface unchanged to the caller', () => {
+      const boom = new Error('boom')
+      const cachedFunction = cached(() => {
+        throw boom
+      })
+
+      let caught: unknown
+      try {
+        cachedFunction()
+      } catch (e) {
+        caught = e
+      }
+      // the exact thrown error propagates; nothing wraps or swallows it
+      expect(caught).toBe(boom)
+    })
+
+    it('should not cache a thrown error, so the next call retries', () => {
+      let calls = 0
+      const cachedFunction = cached((n: number) => {
+        calls++
+        if (calls === 1) throw new Error('transient')
+        return n * 10
+      })
+
+      // first call throws and caches nothing
+      expect(() => cachedFunction(1)).toThrow('transient')
+      expect(calls).toBe(1)
+
+      // second call recomputes rather than replaying the error, then caches
+      expect(cachedFunction(1)).toBe(10)
+      expect(cachedFunction(1)).toBe(10)
+      expect(calls).toBe(2)
+    })
+
+    it('should surface a failed refresh instead of the stale value once the ttl elapses', () => {
+      let now = 1000
+      let calls = 0
+      const cachedFunction = cached(
+        () => {
+          calls++
+          if (calls === 2) throw new Error('refresh failed')
+          return calls * 10
+        },
+        { ttlMs: 100, timeProvider: { now: () => now } }
+      )
+
+      expect(cachedFunction()).toBe(10)
+
+      now = 1101 // ttl exceeded -> refresh is attempted and throws
+      // the stale value is not served in place of the error
+      expect(() => cachedFunction()).toThrow('refresh failed')
+      expect(calls).toBe(2)
+
+      // the failed refresh cached nothing new, so the next call retries and succeeds
+      expect(cachedFunction()).toBe(30)
+      expect(calls).toBe(3)
+    })
+  })
 })
