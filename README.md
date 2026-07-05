@@ -49,6 +49,43 @@ cachedAction() // heavy computation happens here lazily
 cachedAction() // will return the cached result instead of running the heavy computation again
 ```
 
+### cached (lazy)
+```ts
+import { cached } from '@fettstorch/jule'
+// like `once`, but keyed per-argument and with optional time-based eviction
+const fetchUser = cached((id: number) => expensiveLookup(id))
+fetchUser(1) // runs the lookup for id 1
+fetchUser(1) // returns the cached result for id 1
+fetchUser(2) // different argument -> runs the lookup again
+
+// manual eviction: drop one entry, or clear the whole cache
+fetchUser.evict(1) // next fetchUser(1) recomputes
+fetchUser.clear()  // drops every cached entry
+
+// evict after a time-to-live (ms); recomputes once the ttl has elapsed
+const now = cached(() => Date.now(), { ttlMs: 1000 })
+now() // computes
+now() // cached for up to 1 second, then recomputes on the next call
+
+// object arguments — mode decides how they are keyed.
+// 'structural' (default): equal shape -> same entry (uses JSON.stringify)
+const byShape = cached((p: { id: number }) => expensiveLookup(p.id))
+byShape({ id: 1 })
+byShape({ id: 1 }) // cached: a fresh but equal object hits the same entry
+
+// 'identity': keyed by reference, so a fresh equal object is a new entry
+const byRef = cached((p: { id: number }) => expensiveLookup(p.id), { mode: 'identity' })
+const p = { id: 1 }
+byRef(p)
+byRef(p)        // cached: same reference
+byRef({ id: 1 }) // recomputes: different reference
+
+// opt into shared state by passing an explicit cache (and optionally a cacheKey)
+const store = {}
+const a = cached(computeA, { cache: store })
+const b = cached(computeB, { cache: store, cacheKey: 'b' })
+```
+
 ### sleep
 ```ts
 import { sleep } from '@fettstorch/jule'
