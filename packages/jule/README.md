@@ -166,12 +166,14 @@ const newMap = toMap([1, 2, 3], (value, idx) => [idx, value * 2])
 
 ```ts
 import { retryable } from '@fettstorch/jule'
-// run an action and retry it on demand; `retry` interrupts the action
-// (nothing after it runs) and re-invokes it after an optional backoff.
+// run an action and retry it on demand. `retry` throws under the hood, so
+// it never returns and re-invokes the action after an optional backoff —
+// meaning any code after a `retry` call is effectively dead, even though
+// TS's control-flow analysis isn't clever enough to grey it out for you.
 const user = await retryable(async ({ retry, tryCount }) => {
   const response = await fetch('/api/user')
   if (!response.ok) {
-    retry({ backoffMs: 250 * tryCount }) // unreachable code below 👍
+    retry({ backoffMs: 250 * tryCount }) // nothing below this line runs 👍
   }
   return response.json()
 })
