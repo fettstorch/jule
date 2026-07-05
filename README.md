@@ -163,3 +163,23 @@ const newMap = toMap({ a: 1, b: 2 }, ([key, value]) => [key, value.toString()])
 const newMap = toMap([1, 2, 3], (value, idx) => [idx, value * 2])
 // newMap is now a new Map([[0, 2], [1, 4], [2, 6]])
 ```
+
+### retryable
+
+```ts
+import { retryable } from '@fettstorch/jule'
+// run an action and retry it on demand; `retry` interrupts the action
+// (nothing after it runs) and re-invokes it after an optional backoff.
+const user = await retryable(async ({ retry, tryCount }) => {
+  const response = await fetch('/api/user')
+  if (!response.ok) {
+    retry({ backoffMs: 250 * tryCount }) // unreachable code below 👍
+  }
+  return response.json()
+})
+// works synchronously too — the return type mirrors the action's
+const value = retryable(({ retry, tryCount }) => {
+  if (tryCount < 3) retry({ backoffMs: 0 })
+  return tryCount // 3
+})
+```
