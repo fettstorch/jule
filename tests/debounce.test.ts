@@ -4,29 +4,29 @@ import { debounce, debounced } from '../src/debounce'
 
 describe('debounce', () => {
   it('should allow for different functions to debounce on the same timer', async () => {
-    const { promise, resolve } = awaitable()
+    const signal = awaitable()
     const lock = {}
     let state = 0
     const fn1 = () => {
       state++
-      resolve()
+      signal.resolve()
     }
     const fn2 = () => {
       state++
-      resolve()
+      signal.resolve()
     }
     debounce(fn1, 10, lock)
     debounce(fn2, 10, lock) // only fn2 will be executed after 1000ms
-    await promise
+    await signal
     expect(state).toEqual(1)
   })
   it('should never execute a callback multiple times if the handler is called multiple times within the delay', async () => {
     let state = 0
-    const { promise, resolve } = awaitable()
+    const signal = awaitable()
 
     const action = () => {
       state++
-      resolve()
+      signal.resolve()
     }
     const debouncedAction = debounced(action, 0)
 
@@ -34,30 +34,28 @@ describe('debounce', () => {
     debouncedAction()
     debouncedAction()
 
-    await promise
+    await signal
     expect(state).toEqual(1)
   })
 
   it('should allow a handler to be called again after the delay', async () => {
-    const { promise, resolve: res } = awaitable()
-    let resolve = res
+    let signal = awaitable()
 
     let state = 0
 
     const handler = () =>
       debounce(() => {
         state++
-        resolve()
+        signal.resolve()
       }, 0)
 
     handler()
-    await promise
-    const { promise: p2, resolve: res2 } = awaitable()
-    resolve = res2
+    await signal
+    signal = awaitable()
 
     handler()
     handler()
-    await p2
+    await signal
 
     expect(state).toEqual(2)
   })

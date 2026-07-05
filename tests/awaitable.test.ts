@@ -27,17 +27,17 @@ describe('Subject', () => {
     })
 
     it('should be resolved when promise resolves', async () => {
-      const { status, resolve } = subject()
-      resolve()
-      await subject()
-      expect(status()).toBe('resolved')
+      const s = subject()
+      s.resolve()
+      await s
+      expect(s.status()).toBe('resolved')
     })
 
     it('should be rejected when promise rejects', async () => {
-      const { status, reject } = subject()
-      reject('error')
-      await subject()
-      expect(status()).toBe('rejected')
+      const s = subject()
+      s.reject('error')
+      await s.catch(() => {})
+      expect(s.status()).toBe('rejected')
     })
   })
 })
