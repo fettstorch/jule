@@ -1,0 +1,16 @@
+{
+  "name": "consumer",
+  "private": true,
+  "description": "Test-only consumer that installs the packed @fettstorch/jule tarball to prove the published package is usable.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@fettstorch/jule": "file:./jule.tgz"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

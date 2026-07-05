@@ -4,6 +4,11 @@ build/
 lib/
 out/
 
+# Packaging (gold-standard verify)
+*.tgz
+# consumer install is regenerated on every `test:pack` run
+apps/consumer/bun.lock
+
 # Dependencies
 node_modules/
 .pnp.*

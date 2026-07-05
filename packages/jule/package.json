@@ -1,0 +1,36 @@
+{
+  "name": "@fettstorch/jule",
+  "version": "1.5.3",
+  "description": "Some general JS/TS utils",
+  "keywords": [
+    "typescript",
+    "utils",
+    "when"
+  ],
+  "license": "ISC",
+  "author": "Julian Müller",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schnullerpip/jule.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "bun run build:js && bun run build:types",
+    "build:js": "bun build ./src/index.ts --outdir dist --format esm --target node",
+    "build:types": "tsc -p tsconfig.build.json --emitDeclarationOnly && bun run scripts/fix-dts-extensions.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepack": "bun run build && bun run test"
+  }
+}
