@@ -16,20 +16,19 @@
   "files": [
     "dist"
   ],
-  "main": "./dist/cjs/index.js",
-  "module": "./dist/esm/index.js",
-  "types": "./dist/esm/index.d.ts",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js",
-      "types": "./dist/esm/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "scripts": {
-    "build": "bun run build:esm && bun run build:cjs",
-    "build:esm": "bunx tsc -p tsconfig.esm.json",
-    "build:cjs": "bunx tsc -p tsconfig.cjs.json",
+    "build": "bun run build:js && bun run build:types",
+    "build:js": "bun build ./src/index.ts --outdir dist --format esm --target node",
+    "build:types": "tsc -p tsconfig.build.json --emitDeclarationOnly && bun run scripts/fix-dts-extensions.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "oxfmt",
@@ -42,6 +41,7 @@
     "bun": "^1.3.2",
     "oxfmt": "^0.57.0",
     "oxlint": "^1.72.0",
+    "typescript": "^6.0.3",
     "vitest": "^4.0.12"
   },
   "packageManager": "bun@1.3.2"
