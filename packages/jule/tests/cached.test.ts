@@ -441,4 +441,108 @@ describe('cached', () => {
       expect(calls).toBe(3)
     })
   })
+
+  describe('argument key injectivity', () => {
+    it('should not collide multi-arg lists with a single arg containing the join delimiter', () => {
+      let calls = 0
+      const cachedFunction = cached((...args: string[]) => {
+        calls++
+        return args.join('|')
+      })
+
+      // two string args vs one string that embeds the old comma delimiter:
+      // these historically collapsed onto one entry
+      expect(cachedFunction('a', 'b')).toBe('a|b')
+      expect(cachedFunction('a,b')).toBe('a,b')
+      expect(calls).toBe(2)
+
+      // and each retains its own value on the cached re-read
+      expect(cachedFunction('a', 'b')).toBe('a|b')
+      expect(cachedFunction('a,b')).toBe('a,b')
+      expect(calls).toBe(2)
+    })
+
+    it('should not collide a number with its string form', () => {
+      let calls = 0
+      const cachedFunction = cached((a: unknown) => {
+        calls++
+        return `${typeof a}:${String(a)}`
+      })
+
+      expect(cachedFunction(1)).toBe('number:1')
+      expect(cachedFunction('1')).toBe('string:1')
+      expect(calls).toBe(2)
+
+      expect(cachedFunction(1)).toBe('number:1')
+      expect(cachedFunction('1')).toBe('string:1')
+      expect(calls).toBe(2)
+    })
+
+    it('should not collide a boolean with its string form', () => {
+      let calls = 0
+      const cachedFunction = cached((a: unknown) => {
+        calls++
+        return `${typeof a}:${String(a)}`
+      })
+
+      expect(cachedFunction(true)).toBe('boolean:true')
+      expect(cachedFunction('true')).toBe('string:true')
+      expect(calls).toBe(2)
+    })
+
+    it('should not collide null with its string form', () => {
+      let calls = 0
+      const cachedFunction = cached((a: unknown) => {
+        calls++
+        return `${typeof a}:${String(a)}`
+      })
+
+      expect(cachedFunction(null)).toBe('object:null')
+      expect(cachedFunction('null')).toBe('string:null')
+      expect(calls).toBe(2)
+    })
+
+    it('should not collide undefined with its string form', () => {
+      let calls = 0
+      const cachedFunction = cached((a: unknown) => {
+        calls++
+        return `${typeof a}:${String(a)}`
+      })
+
+      expect(cachedFunction(undefined)).toBe('undefined:undefined')
+      expect(cachedFunction('undefined')).toBe('string:undefined')
+      expect(calls).toBe(2)
+    })
+
+    it('should not collide an identity-mode object id with an equal numeric primitive', () => {
+      let calls = 0
+      const cachedFunction = cached(
+        (a: unknown) => {
+          calls++
+          return typeof a === 'object' ? 'from-object' : 'from-number'
+        },
+        { mode: 'identity' }
+      )
+
+      // a fresh object is keyed by an internal integer identity id; a numeric
+      // primitive equal to that id must not land on the same entry
+      expect(cachedFunction({})).toBe('from-object')
+      expect(cachedFunction(1)).toBe('from-number')
+      expect(calls).toBe(2)
+    })
+
+    it('should still share one entry for equal-shape distinct object refs in structural mode', () => {
+      let calls = 0
+      const cachedFunction = cached((o: { id: number }) => {
+        calls++
+        return o.id
+      })
+
+      // the injectivity fix must not over-fix: structurally-equal distinct
+      // references still collapse to a single entry
+      expect(cachedFunction({ id: 1 })).toBe(1)
+      expect(cachedFunction({ id: 1 })).toBe(1)
+      expect(calls).toBe(1)
+    })
+  })
 })

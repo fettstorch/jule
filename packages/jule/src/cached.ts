@@ -5,9 +5,10 @@ import { Func } from './types/Func'
  * subsequent calls, until an eviction condition is met.
  *
  * Unlike {@link once}, the result is cached per distinct argument list, so
- * `cachedFn(1)` and `cachedFn(2)` are memoized independently. Primitive
- * arguments are always keyed by value; object arguments are keyed according
- * to `config.mode` (see below).
+ * `cachedFn(1)` and `cachedFn(2)` are memoized independently. Argument keys
+ * are collision-free across types — `1`, `"1"`, and `true` never share an
+ * entry — and object arguments are keyed according to `config.mode` (see
+ * below).
  *
  * @param originalFunction the function whose result should be cached. It is
  * invoked with the same `this` and arguments as the returned wrapper.
@@ -118,14 +119,35 @@ export function cached<
   }
 
   function createArgsKey(args: unknown[]) {
-    return [...args]
-      .map((a) => {
-        if (!!a && typeof a === 'object') {
-          return mode === 'identity' ? getUniqueIdentifierForObject(a) : JSON.stringify(a)
-        }
-        return String(a)
-      })
-      .join(',')
+    // JSON-encode a per-argument [tag, ...payload] tuple. The tag makes the
+    // scheme injective across types (`1`/`"1"`, `null`/`"null"`, an identity
+    // id equal to a numeric arg all differ) and JSON handles the delimiting,
+    // so a string arg can never forge a neighbouring entry. Objects are
+    // embedded raw and serialized exactly once (no double-stringify).
+    return JSON.stringify(args.map(argKeyTuple))
+  }
+
+  function argKeyTuple(a: unknown): unknown[] {
+    switch (typeof a) {
+      case 'string':
+      case 'number':
+      case 'boolean':
+        return [typeof a, a]
+      case 'undefined':
+        return ['undefined']
+      // bigint/symbol aren't JSON-serializable -> tag their string form
+      case 'bigint':
+      case 'symbol':
+        return [typeof a, String(a)]
+      // functions can't be structurally serialized -> always keyed by identity
+      case 'function':
+        return ['function', getUniqueIdentifierForObject(a as object)]
+      default:
+        if (a === null) return ['null']
+        return mode === 'identity'
+          ? ['object-id', getUniqueIdentifierForObject(a as object)]
+          : ['object', a]
+    }
   }
 }
 
