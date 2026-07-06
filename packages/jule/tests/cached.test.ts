@@ -374,11 +374,11 @@ describe('cached', () => {
       expect(calls).toBe(2) // recomputed
     })
 
-    it('should throw on object arguments JSON cannot represent', () => {
+    it('should throw on object arguments JSON cannot represent (BigInt)', () => {
       const cachedFunction = cached((_o: object) => 0, { mode: 'structural' })
-      const circular: { self?: unknown } = {}
-      circular.self = circular
-      expect(() => cachedFunction(circular)).toThrow()
+      // BigInt is the genuine "JSON cannot represent" case: canonicalization
+      // leaves it in place and the outer JSON.stringify still throws.
+      expect(() => cachedFunction({ n: 5n })).toThrow()
     })
   })
 
@@ -543,6 +543,139 @@ describe('cached', () => {
       expect(cachedFunction({ id: 1 })).toBe(1)
       expect(cachedFunction({ id: 1 })).toBe(1)
       expect(calls).toBe(1)
+    })
+  })
+
+  describe('structural mode key canonicalization', () => {
+    it('should treat top-level property order as irrelevant', () => {
+      let calls = 0
+      const cachedFunction = cached((o: { a: number; b: number }) => {
+        calls++
+        return o.a + o.b
+      })
+
+      // structural mode is the default; the canonical key sorts properties so
+      // insertion order cannot fork the entry
+      expect(cachedFunction({ a: 1, b: 2 })).toBe(3)
+      expect(cachedFunction({ b: 2, a: 1 })).toBe(3)
+      expect(calls).toBe(1)
+    })
+
+    it('should treat nested property order as irrelevant', () => {
+      let calls = 0
+      const cachedFunction = cached(
+        (o: { a: number; nested: { x: number; y: number } }) => {
+          calls++
+          return o.a + o.nested.x + o.nested.y
+        }
+      )
+
+      // canonicalization recurses, so nested objects are sorted too
+      expect(cachedFunction({ a: 1, nested: { x: 1, y: 2 } })).toBe(4)
+      expect(cachedFunction({ nested: { y: 2, x: 1 }, a: 1 })).toBe(4)
+      expect(calls).toBe(1)
+    })
+
+    it('should keep array order significant', () => {
+      let calls = 0
+      const cachedFunction = cached((xs: number[]) => {
+        calls++
+        return xs.join(',')
+      })
+
+      // sorting keys must not spill over into reordering array elements
+      expect(cachedFunction([1, 2])).toBe('1,2')
+      expect(cachedFunction([2, 1])).toBe('2,1')
+      expect(calls).toBe(2)
+    })
+
+    it('should keep structurally-different objects distinct', () => {
+      let calls = 0
+      const cachedFunction = cached((o: { a: number }) => {
+        calls++
+        return o.a
+      })
+
+      // canonicalization must not collapse genuinely different values
+      expect(cachedFunction({ a: 1 })).toBe(1)
+      expect(cachedFunction({ a: 2 })).toBe(2)
+      expect(calls).toBe(2)
+    })
+
+    it('should key Date arguments by value via toJSON', () => {
+      let calls = 0
+      const cachedFunction = cached((d: Date) => {
+        calls++
+        return d.getUTCFullYear()
+      })
+
+      // equal instants share one entry, a different instant is distinct
+      // -> two computes across three calls
+      expect(cachedFunction(new Date('2024-01-01'))).toBe(2024)
+      expect(cachedFunction(new Date('2024-01-01'))).toBe(2024)
+      expect(cachedFunction(new Date('2020-01-01'))).toBe(2020)
+      expect(calls).toBe(2)
+    })
+
+    it('should cache a nested cyclic argument via the circular sentinel', () => {
+      let calls = 0
+      const cachedFunction = cached((o: { inner: { tag: number } }) => {
+        calls++
+        return o.inner.tag
+      })
+
+      const makeCyclic = () => {
+        const inner: { tag: number; self?: unknown } = { tag: 7 }
+        const outer = { inner }
+        inner.self = outer // cycle reachable only through a nested property
+        return outer
+      }
+
+      // a genuine back-reference is keyed as the circular sentinel rather than
+      // throwing, so the cyclic arg computes and caches like any other value
+      expect(cachedFunction(makeCyclic())).toBe(7)
+      // a fresh, structurally-equal cyclic object hits the same entry
+      expect(cachedFunction(makeCyclic())).toBe(7)
+      expect(calls).toBe(1)
+    })
+
+    it('should cache a self-cyclic argument and share one entry for equal shapes', () => {
+      let calls = 0
+      const cachedFunction = cached((o: { id: number }) => {
+        calls++
+        return o.id
+      })
+
+      const makeSelfCyclic = (id: number) => {
+        const node: { id: number; self?: unknown } = { id }
+        node.self = node // direct back-reference to itself
+        return node
+      }
+
+      // the self-reference becomes the circular sentinel; no throw
+      expect(cachedFunction(makeSelfCyclic(1))).toBe(1)
+      // a fresh but structurally-equal self-cyclic object is a cache hit
+      expect(cachedFunction(makeSelfCyclic(1))).toBe(1)
+      expect(calls).toBe(1)
+    })
+
+    it('should keep cyclic arguments distinct when non-cycle data differs', () => {
+      let calls = 0
+      const cachedFunction = cached((o: { id: number }) => {
+        calls++
+        return o.id
+      })
+
+      const makeSelfCyclic = (id: number) => {
+        const node: { id: number; self?: unknown } = { id }
+        node.self = node
+        return node
+      }
+
+      // same cyclic shape, different payload -> distinct canonical keys
+      expect(cachedFunction(makeSelfCyclic(1))).toBe(1)
+      expect(cachedFunction(makeSelfCyclic(2))).toBe(2)
+      expect(calls).toBe(2)
     })
   })
 })

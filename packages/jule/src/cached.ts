@@ -28,10 +28,14 @@ import { Func } from './types/Func'
  * ttl checks. Defaults to `Date`; inject a custom provider to control time in
  * tests.
  * @param config.mode how object arguments are keyed. `"structural"` (default)
- * keys them by `JSON.stringify`, so structurally-equal objects share one entry
- * (at the cost of throwing on values JSON cannot represent, e.g. cycles or
- * BigInt). `"identity"` keys them by reference, so two distinct objects never
- * collide but a fresh structurally-equal object is a new key.
+ * keys them by their canonical JSON form: keys are sorted recursively so
+ * property order is irrelevant (`{ a, b }` and `{ b, a }` share one entry),
+ * while array order is significant and `toJSON` (e.g. `Date`) is honoured.
+ * Cyclic back-references are keyed as a `"[circular reference]"` sentinel
+ * rather than throwing, so cyclic arguments are cacheable; only values JSON
+ * genuinely cannot represent (e.g. BigInt) still throw. `"identity"`
+ * keys them by reference, so two distinct objects never collide but a fresh
+ * structurally-equal object is a new key.
  * @returns a function with the same signature as `originalFunction` that
  * returns the cached (or freshly computed) result.
  *
@@ -146,7 +150,7 @@ export function cached<
         if (a === null) return ['null']
         return mode === 'identity'
           ? ['object-id', getUniqueIdentifierForObject(a as object)]
-          : ['object', a]
+          : ['object', canonicalize(a)]
     }
   }
 }
@@ -169,6 +173,45 @@ const getUniqueIdentifierForObject = (() => {
     return identity
   }
 })()
+
+// sentinel substituted for a cyclic back-reference so cyclic args stay keyable
+const CIRCULAR = '[circular reference]'
+
+// --- structural canonicalization ---
+// Recursively sorts object keys so structurally-equal objects share one cache
+// key regardless of property insertion order; array order stays significant.
+// `toJSON` (e.g. Date) is honoured like JSON.stringify. A DAG (a repeated
+// non-cyclic reference) fully expands; a genuine back-reference to an ancestor
+// still on the stack becomes a CIRCULAR sentinel instead of throwing, so
+// cyclic args are keyable. Values JSON cannot represent (BigInt) are left to
+// the outer JSON.stringify, which still throws.
+
+function canonicalize(value: unknown, seen: WeakSet<object> = new WeakSet()): unknown {
+  if (value === null || typeof value !== 'object') return value
+
+  // resolve toJSON first, mirroring JSON.stringify's own traversal
+  let node: object = value
+  if ('toJSON' in value && typeof value.toJSON === 'function') {
+    const json = value.toJSON()
+    if (json === null || typeof json !== 'object') return json
+    node = json
+  }
+
+  if (seen.has(node)) {
+    return CIRCULAR
+  }
+  seen.add(node)
+  const canonical = Array.isArray(node)
+    ? node.map((element) => canonicalize(element, seen))
+    : Object.entries(node)
+        .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+        .reduce<Record<string, unknown>>((acc, [key, val]) => {
+          acc[key] = canonicalize(val, seen)
+          return acc
+        }, {})
+  seen.delete(node)
+  return canonical
+}
 
 // --- caching ---
 const defaultCacheKey = Symbol('jule-cached-function-util-deafult-cache-key')
