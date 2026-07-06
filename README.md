@@ -76,7 +76,7 @@ now() // computes
 now() // cached for up to 1 second, then recomputes on the next call
 
 // object arguments — mode decides how they are keyed.
-// 'structural' (default): equal shape -> same entry (uses JSON.stringify)
+// 'structural' (default): equal shape -> same entry, regardless of property order
 const byShape = cached((p: { id: number }) => expensiveLookup(p.id))
 byShape({ id: 1 })
 byShape({ id: 1 }) // cached: a fresh but equal object hits the same entry

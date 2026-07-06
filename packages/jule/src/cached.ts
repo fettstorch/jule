@@ -28,14 +28,16 @@ import { Func } from './types/Func'
  * ttl checks. Defaults to `Date`; inject a custom provider to control time in
  * tests.
  * @param config.mode how object arguments are keyed. `"structural"` (default)
- * keys them by their canonical JSON form: keys are sorted recursively so
+ * keys them by a tagged canonical form: keys are sorted recursively so
  * property order is irrelevant (`{ a, b }` and `{ b, a }` share one entry),
  * while array order is significant and `toJSON` (e.g. `Date`) is honoured.
  * Cyclic back-references are keyed as a `"[circular reference]"` sentinel
- * rather than throwing, so cyclic arguments are cacheable; only values JSON
- * genuinely cannot represent (e.g. BigInt) still throw. `"identity"`
- * keys them by reference, so two distinct objects never collide but a fresh
- * structurally-equal object is a new key.
+ * rather than throwing, so cyclic arguments are cacheable. Every value is
+ * tagged by type at every depth, so keying is total and never throws: values
+ * JSON cannot natively represent (BigInt, non-finite numbers, `undefined`
+ * properties) are keyed distinctly rather than collapsing or erroring.
+ * `"identity"` keys objects by reference, so two distinct objects never collide
+ * but a fresh structurally-equal object is a new key.
  * @returns a function with the same signature as `originalFunction` that
  * returns the cached (or freshly computed) result.
  *
@@ -89,14 +91,21 @@ export function cached<
   // this elegantly avoids namespace collisions
   const functionLocalCache: Cache<TargetFunctionReturnType> = {}
 
-  const { ttlMs, cache, cacheKey, timeProvider, mode } = {
+  const defaults: {
+    ttlMs: number
+    cache: Cache<TargetFunctionReturnType>
+    cacheKey: PropertyKey
+    timeProvider: { now: () => number }
+    mode: Mode
+  } = {
     ttlMs: Infinity,
     cache: functionLocalCache,
     cacheKey: defaultCacheKey,
     timeProvider: Date,
-    mode: 'structural' as Mode,
-    ...config
+    mode: 'structural'
   }
+
+  const { ttlMs, cache, cacheKey, timeProvider, mode } = { ...defaults, ...config }
 
   const cachedFunction = function (
     this: This,
@@ -134,39 +143,13 @@ export function cached<
 
   // --- key derivation (object args depend on config.mode) ---
   function createKey(args: unknown[]) {
-    return `${String(cacheKey)}-${createArgsKey(args)}`
-  }
-
-  function createArgsKey(args: unknown[]) {
-    // JSON-encode a per-argument [tag, ...payload] tuple. The tag makes the
-    // scheme injective across types (`1`/`"1"`, `null`/`"null"`, an identity
-    // id equal to a numeric arg all differ) and JSON handles the delimiting,
-    // so a string arg can never forge a neighbouring entry. Objects are
-    // embedded raw and serialized exactly once (no double-stringify).
-    return JSON.stringify(args.map(argKeyTuple))
-  }
-
-  function argKeyTuple(a: unknown): unknown[] {
-    switch (typeof a) {
-      case 'string':
-      case 'number':
-      case 'boolean':
-        return [typeof a, a]
-      case 'undefined':
-        return ['undefined']
-      // bigint/symbol aren't JSON-serializable -> tag their string form
-      case 'bigint':
-      case 'symbol':
-        return [typeof a, String(a)]
-      // functions can't be structurally serialized -> always keyed by identity
-      case 'function':
-        return ['function', getUniqueIdentifierForObject(a as object)]
-      default:
-        if (a === null) return ['null']
-        return mode === 'identity'
-          ? ['object-id', getUniqueIdentifierForObject(a as object)]
-          : ['object', canonicalize(a)]
-    }
+    // Each argument is turned into a fully-tagged, JSON-serializable fragment by
+    // `canonicalKey`, then the whole list is serialized once. Tagging every
+    // value at every depth makes the scheme injective (`1`/`"1"`, `null`/
+    // `"null"`, non-finite numbers, an identity id equal to a numeric arg all
+    // differ) and JSON handles the delimiting, so no argument can forge a
+    // neighbouring entry.
+    return `${String(cacheKey)}-${JSON.stringify(args.map((a) => canonicalKey(a, mode)))}`
   }
 }
 
@@ -180,55 +163,81 @@ const getUniqueIdentifierForObject = (() => {
   const objectArgMap = new WeakMap<object, number>()
   let objectIdentityCounter = 0
   return (o: object) => {
-    let identity = objectArgMap.get(o)
-    if (!identity) {
-      identity = ++objectIdentityCounter
-      objectArgMap.set(o, identity)
+    if (!objectArgMap.has(o)) {
+      objectArgMap.set(o, ++objectIdentityCounter)
     }
-    return identity
+    return objectArgMap.get(o)!
   }
 })()
 
 // sentinel substituted for a cyclic back-reference so cyclic args stay keyable
 const CIRCULAR = '[circular reference]'
 
-// --- structural canonicalization ---
-// Recursively sorts object keys so structurally-equal objects share one cache
-// key regardless of property insertion order; array order stays significant.
-// `toJSON` (e.g. Date) is honoured like JSON.stringify. A DAG (a repeated
-// non-cyclic reference) fully expands; a genuine back-reference to an ancestor
-// still on the stack becomes a CIRCULAR sentinel instead of throwing, so
-// cyclic args are keyable. Values JSON cannot represent (BigInt) are left to
-// the outer JSON.stringify, which still throws.
+// --- canonical key derivation ---
+// Turns any value into an injective, JSON-serializable key fragment by tagging
+// it with its type at every depth. Primitives become `[type, payload]` tuples
+// (non-finite numbers, bigint and symbol are tagged by their string form, so
+// keying never throws). In structural mode objects become sorted `['object',
+// entries]` tuples — property order is irrelevant while array order stays
+// significant — and `toJSON` (e.g. Date) is honoured like JSON.stringify. A DAG
+// (a repeated non-cyclic reference) fully expands; a genuine back-reference to
+// an ancestor still on the stack becomes the CIRCULAR sentinel instead of
+// throwing. In identity mode objects are keyed by a stable reference id.
+function canonicalKey(value: unknown, mode: Mode, seen: WeakSet<object> = new WeakSet()): unknown {
+  switch (typeof value) {
+    case 'string':
+    case 'boolean':
+      return [typeof value, value]
+    case 'number':
+      // non-finite numbers serialize to `null` under raw JSON -> tag their
+      // (distinct) string form so NaN/Infinity/-Infinity stay injective
+      return ['number', Number.isFinite(value) ? value : String(value)]
+    case 'undefined':
+      return ['undefined']
+    case 'bigint':
+    case 'symbol':
+      return [typeof value, String(value)]
+    // functions can't be structurally serialized -> always keyed by identity
+    case 'function':
+      return ['function', getUniqueIdentifierForObject(value)]
+    default: {
+      if (value === null) return ['null']
+      // typeof-narrowing an `unknown` default branch can't reach `object`, so
+      // pin it once here rather than casting at every use
+      const obj = value as object
+      return mode === 'identity'
+        ? ['object-id', getUniqueIdentifierForObject(obj)]
+        : canonicalStructural(obj, seen)
+    }
+  }
+}
 
-function canonicalize(value: unknown, seen: WeakSet<object> = new WeakSet()): unknown {
-  if (value === null || typeof value !== 'object') return value
-
+function canonicalStructural(value: object, seen: WeakSet<object>): unknown {
   // resolve toJSON first, mirroring JSON.stringify's own traversal
   let node: object = value
   if ('toJSON' in value && typeof value.toJSON === 'function') {
     const json = value.toJSON()
-    if (json === null || typeof json !== 'object') return json
+    // toJSON may yield a primitive (Date -> string); re-tag it so nested and
+    // top-level values follow the same rules
+    if (json === null || typeof json !== 'object') return canonicalKey(json, 'structural', seen)
     node = json
   }
 
-  if (seen.has(node)) {
-    return CIRCULAR
-  }
+  if (seen.has(node)) return CIRCULAR
   seen.add(node)
   const canonical = Array.isArray(node)
-    ? node.map((element) => canonicalize(element, seen))
-    : Object.entries(node)
-        .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
-        .reduce<Record<string, unknown>>((acc, [key, val]) => {
-          acc[key] = canonicalize(val, seen)
-          return acc
-        }, {})
+    ? ['array', node.map((element) => canonicalKey(element, 'structural', seen))]
+    : [
+        'object',
+        Object.entries(node)
+          .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+          .map(([key, val]) => [key, canonicalKey(val, 'structural', seen)])
+      ]
   seen.delete(node)
   return canonical
 }
 
 // --- caching ---
-const defaultCacheKey = Symbol('jule-cached-function-util-deafult-cache-key')
-type Cache<CachedValue> = Record<PropertyKey, { val: CachedValue; updateTime: number }>
+const defaultCacheKey = Symbol('jule-cached-function-util-default-cache-key')
+type Cache<CachedValue> = Record<string, { val: CachedValue; updateTime: number }>
 type Mode = 'structural' | 'identity'

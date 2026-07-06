@@ -374,11 +374,49 @@ describe('cached', () => {
       expect(calls).toBe(2) // recomputed
     })
 
-    it('should throw on object arguments JSON cannot represent (BigInt)', () => {
-      const cachedFunction = cached((_o: object) => 0, { mode: 'structural' })
-      // BigInt is the genuine "JSON cannot represent" case: canonicalization
-      // leaves it in place and the outer JSON.stringify still throws.
-      expect(() => cachedFunction({ n: 5n })).toThrow()
+    it('should key nested non-finite numbers distinctly', () => {
+      let calls = 0
+      const cachedFunction = cached((o: { n: number }) => {
+        calls++
+        return String(o.n)
+      })
+
+      // nested values must get the same injectivity guarantee as top-level ones
+      expect(cachedFunction({ n: NaN })).toBe('NaN')
+      expect(cachedFunction({ n: Infinity })).toBe('Infinity')
+      expect(calls).toBe(2)
+    })
+
+    it('should distinguish an object with an undefined-valued key from one without it', () => {
+      let calls = 0
+      const cachedFunction = cached((o: Record<string, unknown>) => {
+        calls++
+        return Object.keys(o).length
+      })
+
+      // raw JSON drops undefined-valued keys, collapsing these two shapes; the
+      // tag scheme must keep them distinct
+      expect(cachedFunction({ a: undefined })).toBe(1)
+      expect(cachedFunction({})).toBe(0)
+      expect(calls).toBe(2)
+    })
+
+    it('should key nested BigInt values by their string form without throwing', () => {
+      let calls = 0
+      const cachedFunction = cached(
+        (o: { n: bigint }) => {
+          calls++
+          return o.n
+        },
+        { mode: 'structural' }
+      )
+
+      // keying is total: a nested BigInt is tagged by its string form (like a
+      // top-level BigInt) rather than throwing on serialization
+      expect(cachedFunction({ n: 5n })).toBe(5n)
+      expect(cachedFunction({ n: 5n })).toBe(5n) // cache hit
+      expect(cachedFunction({ n: 6n })).toBe(6n) // distinct entry
+      expect(calls).toBe(2)
     })
   })
 
@@ -637,6 +675,39 @@ describe('cached', () => {
 
       expect(cachedFunction(undefined)).toBe('undefined:undefined')
       expect(cachedFunction('undefined')).toBe('string:undefined')
+      expect(calls).toBe(2)
+    })
+
+    it('should keep non-finite numbers (NaN, Infinity, -Infinity) as distinct entries', () => {
+      let calls = 0
+      const cachedFunction = cached((a: number) => {
+        calls++
+        return String(a)
+      })
+
+      // all three serialize to `null` under raw JSON and historically collapsed
+      // onto a single entry; the tag scheme must keep them injective
+      expect(cachedFunction(NaN)).toBe('NaN')
+      expect(cachedFunction(Infinity)).toBe('Infinity')
+      expect(cachedFunction(-Infinity)).toBe('-Infinity')
+      expect(calls).toBe(3)
+
+      // and each retains its own value on the cached re-read
+      expect(cachedFunction(NaN)).toBe('NaN')
+      expect(cachedFunction(Infinity)).toBe('Infinity')
+      expect(cachedFunction(-Infinity)).toBe('-Infinity')
+      expect(calls).toBe(3)
+    })
+
+    it('should not collide a non-finite number with its string form', () => {
+      let calls = 0
+      const cachedFunction = cached((a: unknown) => {
+        calls++
+        return `${typeof a}:${String(a)}`
+      })
+
+      expect(cachedFunction(NaN)).toBe('number:NaN')
+      expect(cachedFunction('NaN')).toBe('string:NaN')
       expect(calls).toBe(2)
     })
 
