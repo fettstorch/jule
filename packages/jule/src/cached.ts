@@ -40,11 +40,26 @@ import { Func } from './types/Func'
  * returns the cached (or freshly computed) result.
  *
  * @remarks
- * Errors are not handled: if `originalFunction` throws, the error propagates
- * to the caller unchanged and nothing is written to the cache. Failures are
- * therefore never memoized — the next call retries. When a stale entry's
- * refresh (past `ttlMs`) throws, the error surfaces rather than the stale
- * value, and the entry is left untouched for the next call to retry.
+ * `cached` is synchronous and not promise-aware: it stores whatever
+ * `originalFunction` returns, verbatim. If it throws synchronously the error
+ * propagates to the caller and nothing is written to the cache, so a
+ * synchronous failure is never memoized — the next call retries. When a stale
+ * entry's refresh (past `ttlMs`) throws, the error surfaces rather than the
+ * stale value, and the entry is left untouched for the next call to retry.
+ *
+ * @remarks
+ * For an async `originalFunction` the cached value is the returned promise,
+ * not its resolved value — including a rejected one. `cached` does not unwrap
+ * or inspect it, so a rejection is cached like any other result and replayed
+ * on every hit; use the returned wrapper's `.evict(...args)` (or `.clear()`)
+ * to discard it and retry, applying whatever retry policy the cache cannot
+ * know about.
+ * `ttlMs` is measured from when the wrapper is invoked, not from when the
+ * promise settles, so keep `ttlMs` at least as large as the expected
+ * operation latency — otherwise the entry can expire mid-flight and each call
+ * starts another operation. As a useful consequence of caching the pending
+ * promise, concurrent callers within one ttl window share a single in-flight
+ * operation (request de-duplication).
  *
  * @example
  * const fetchUser = cached((id: number) => expensiveLookup(id))

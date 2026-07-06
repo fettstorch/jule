@@ -442,6 +442,132 @@ describe('cached', () => {
     })
   })
 
+  describe('async behavior (not promise-aware)', () => {
+    it('should cache a returned promise by identity, running the fn once', async () => {
+      let calls = 0
+      const cachedFunction = cached((n: number) => {
+        calls++
+        return Promise.resolve(n * 2)
+      })
+
+      const p1 = cachedFunction(21)
+      const p2 = cachedFunction(21)
+
+      // the cached value is the promise itself, stored verbatim: a second call
+      // with the same args returns the exact same instance and never re-invokes
+      expect(p2).toBe(p1)
+      expect(calls).toBe(1)
+      expect(await p1).toBe(42)
+    })
+
+    it('should cache a rejected promise and replay it without re-invoking', async () => {
+      const boom = new Error('async boom')
+      let calls = 0
+      const cachedFunction = cached((_n: number) => {
+        calls++
+        return Promise.reject(boom)
+      })
+
+      const p1 = cachedFunction(1)
+      const p2 = cachedFunction(1)
+
+      // the returned (rejected) promise is cached like any other value: same
+      // instance handed back, the fn ran once
+      expect(p2).toBe(p1)
+      expect(calls).toBe(1)
+      await expect(p1).rejects.toBe(boom)
+      await expect(p2).rejects.toBe(boom)
+
+      // a rejected promise stays cached even after it settles (unlike a sync
+      // throw, which is never memoized): the next call replays the same
+      // rejection instead of retrying
+      const p3 = cachedFunction(1)
+      expect(p3).toBe(p1)
+      expect(calls).toBe(1)
+      await expect(p3).rejects.toBe(boom)
+    })
+
+    it('should re-invoke after evicting a cached rejection, then cache the success', async () => {
+      const boom = new Error('first attempt fails')
+      let calls = 0
+      const cachedFunction = cached((n: number) => {
+        calls++
+        return calls === 1 ? Promise.reject(boom) : Promise.resolve(n * 10)
+      })
+
+      // the first call caches a rejection
+      await expect(cachedFunction(5)).rejects.toBe(boom)
+      expect(calls).toBe(1)
+
+      // the cache never retries on its own; the caller drives retry by evicting
+      // the rejected entry, and the next call re-invokes the fn
+      cachedFunction.evict(5)
+      const retry = cachedFunction(5)
+      expect(calls).toBe(2)
+      expect(await retry).toBe(50)
+
+      // the resolved promise is now cached: same fulfilled instance, no new call
+      expect(cachedFunction(5)).toBe(retry)
+      expect(calls).toBe(2)
+    })
+
+    it('should share one in-flight promise for concurrent callers while pending', async () => {
+      let calls = 0
+      let resolveInner: (value: number) => void = () => {}
+      const cachedFunction = cached((_n: number) => {
+        calls++
+        return new Promise<number>((resolve) => {
+          resolveInner = resolve
+        })
+      })
+
+      // both callers arrive before the operation settles
+      const p1 = cachedFunction(7)
+      const p2 = cachedFunction(7)
+
+      // caching the pending promise de-duplicates the in-flight work: one shared
+      // instance, the fn ran once
+      expect(p2).toBe(p1)
+      expect(calls).toBe(1)
+
+      // settling it once satisfies every shared caller
+      resolveInner(99)
+      expect(await p1).toBe(99)
+      expect(await p2).toBe(99)
+      expect(calls).toBe(1)
+    })
+
+    it('should anchor ttl to invocation time, not promise settlement', async () => {
+      let now = 1000
+      let calls = 0
+      let resolveInner: (value: number) => void = () => {}
+      const cachedFunction = cached(
+        () => {
+          calls++
+          return new Promise<number>((resolve) => {
+            resolveInner = resolve
+          })
+        },
+        { ttlMs: 100, timeProvider: { now: () => now } }
+      )
+
+      const first = cachedFunction() // freshness window is anchored at t=1000
+      expect(calls).toBe(1)
+
+      now = 1090 // still fresh measured from invocation (90 <= 100)
+      resolveInner(1) // the promise settles here; this instant is NOT the anchor
+      expect(await first).toBe(1)
+
+      // t=1150 is 150 past invocation (stale) but only 60 past settlement. The
+      // entry expires and recomputes, proving the ttl runs from the call, not
+      // from when the promise settled
+      now = 1150
+      const second = cachedFunction()
+      expect(calls).toBe(2)
+      expect(second).not.toBe(first)
+    })
+  })
+
   describe('argument key injectivity', () => {
     it('should not collide multi-arg lists with a single arg containing the join delimiter', () => {
       let calls = 0
