@@ -7,8 +7,8 @@ import { Func } from './types/Func'
  * Unlike {@link once}, the result is cached per distinct argument list, so
  * `cachedFn(1)` and `cachedFn(2)` are memoized independently. Argument keys
  * are collision-free across types — `1`, `"1"`, and `true` never share an
- * entry — and object arguments are keyed according to `config.mode` (see
- * below).
+ * entry — and object arguments are keyed according to
+ * `config.objectArgFingerprintStrategy` (see below).
  *
  * @param originalFunction the function whose result should be cached. It is
  * invoked with the same `this` and arguments as the returned wrapper.
@@ -27,7 +27,8 @@ import { Func } from './types/Func'
  * @param config.timeProvider source of the current time via `now()`, used for
  * ttl checks. Defaults to `Date`; inject a custom provider to control time in
  * tests.
- * @param config.mode how object arguments are keyed. `"structural"` (default)
+ * @param config.objectArgFingerprintStrategy how object arguments are
+ * fingerprinted into a cache key. `"structural"` (default)
  * keys them by a tagged canonical form: keys are sorted recursively so
  * property order is irrelevant (`{ a, b }` and `{ b, a }` share one entry),
  * while array order is significant and `toJSON` (e.g. `Date`) is honoured.
@@ -84,34 +85,37 @@ export function cached<
     cache: Cache<TargetFunctionReturnType>
     cacheKey: PropertyKey
     timeProvider: { now: () => number }
-    mode: Mode
+    objectArgFingerprintStrategy: ObjectArgFingerprintStrategy
   }>
 ) {
-  // default is function local cache
-  // this elegantly avoids namespace collisions
-  const functionLocalCache: Cache<TargetFunctionReturnType> = {}
-
-  const defaults: {
+  const configDefaults: {
     ttlMs: number
     cache: Cache<TargetFunctionReturnType>
     cacheKey: PropertyKey
     timeProvider: { now: () => number }
-    mode: Mode
+    objectArgFingerprintStrategy: ObjectArgFingerprintStrategy
   } = {
     ttlMs: Infinity,
-    cache: functionLocalCache,
+    cache: {},
     cacheKey: defaultCacheKey,
     timeProvider: Date,
-    mode: 'structural'
+    objectArgFingerprintStrategy: 'structural'
   }
 
-  const { ttlMs, cache, cacheKey, timeProvider, mode } = { ...defaults, ...config }
+  const {
+    ttlMs,
+    cache,
+    cacheKey,
+    timeProvider,
+    objectArgFingerprintStrategy: strategy
+  } = { ...configDefaults, ...config }
 
+  // the function that will be returned by the wrapper
   const cachedFunction = function (
     this: This,
     ...args: TargetFunctionArgs
   ): TargetFunctionReturnType {
-    const key = createKey(args)
+    const key = createKey(args, cacheKey, strategy)
 
     const cachedValue = cache[key]
 
@@ -130,7 +134,7 @@ export function cached<
   }
 
   cachedFunction.evict = function (...args: TargetFunctionArgs) {
-    delete cache[createKey(args)]
+    delete cache[createKey(args, cacheKey, strategy)]
   }
 
   cachedFunction.clear = function () {
@@ -140,20 +144,23 @@ export function cached<
   }
 
   return cachedFunction
-
-  // --- key derivation (object args depend on config.mode) ---
-  function createKey(args: unknown[]) {
-    // Each argument is turned into a fully-tagged, JSON-serializable fragment by
-    // `canonicalKey`, then the whole list is serialized once. Tagging every
-    // value at every depth makes the scheme injective (`1`/`"1"`, `null`/
-    // `"null"`, non-finite numbers, an identity id equal to a numeric arg all
-    // differ) and JSON handles the delimiting, so no argument can forge a
-    // neighbouring entry.
-    return `${String(cacheKey)}-${JSON.stringify(args.map((a) => canonicalKey(a, mode)))}`
-  }
 }
 
 //-- module private utility
+
+// --- key derivation (object args depend on the fingerprint strategy) ---
+// Each argument is turned into a fully-tagged, JSON-serializable fragment by
+// `canonicalKey`, then the whole list is serialized once. Tagging every value
+// at every depth makes the scheme injective (`1`/`"1"`, `null`/`"null"`,
+// non-finite numbers, an identity id equal to a numeric arg all differ) and
+// JSON handles the delimiting, so no argument can forge a neighbouring entry.
+function createKey(
+  args: unknown[],
+  cacheKey: PropertyKey,
+  strategy: ObjectArgFingerprintStrategy
+): string {
+  return `${String(cacheKey)}-${JSON.stringify(args.map((a) => canonicalKey(a, strategy)))}`
+}
 
 // --- object identification ---
 // for converting objects into identities
@@ -182,8 +189,13 @@ const CIRCULAR = '[circular reference]'
 // significant — and `toJSON` (e.g. Date) is honoured like JSON.stringify. A DAG
 // (a repeated non-cyclic reference) fully expands; a genuine back-reference to
 // an ancestor still on the stack becomes the CIRCULAR sentinel instead of
-// throwing. In identity mode objects are keyed by a stable reference id.
-function canonicalKey(value: unknown, mode: Mode, seen: WeakSet<object> = new WeakSet()): unknown {
+// throwing. Under the `"identity"` strategy objects are keyed by a stable
+// reference id.
+function canonicalKey(
+  value: unknown,
+  strategy: ObjectArgFingerprintStrategy,
+  seen: WeakSet<object> = new WeakSet()
+): unknown {
   switch (typeof value) {
     case 'string':
     case 'boolean':
@@ -205,7 +217,7 @@ function canonicalKey(value: unknown, mode: Mode, seen: WeakSet<object> = new We
       // typeof-narrowing an `unknown` default branch can't reach `object`, so
       // pin it once here rather than casting at every use
       const obj = value as object
-      return mode === 'identity'
+      return strategy === 'identity'
         ? ['object-id', getUniqueIdentifierForObject(obj)]
         : canonicalStructural(obj, seen)
     }
@@ -240,4 +252,4 @@ function canonicalStructural(value: object, seen: WeakSet<object>): unknown {
 // --- caching ---
 const defaultCacheKey = Symbol('jule-cached-function-util-default-cache-key')
 type Cache<CachedValue> = Record<string, { val: CachedValue; updateTime: number }>
-type Mode = 'structural' | 'identity'
+type ObjectArgFingerprintStrategy = 'structural' | 'identity'

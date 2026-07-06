@@ -280,7 +280,7 @@ describe('cached', () => {
     expect(callsB).toBe(2) // cachedB's entry was wiped too
   })
 
-  describe('identity mode', () => {
+  describe('identity strategy', () => {
     it('should keep distinct entries for structurally-equal distinct objects', () => {
       let calls = 0
       const cachedFunction = cached(
@@ -288,7 +288,7 @@ describe('cached', () => {
           calls++
           return o.id
         },
-        { mode: 'identity' }
+        { objectArgFingerprintStrategy: 'identity' }
       )
 
       // equal shape but distinct references -> distinct entries (unlike structural)
@@ -305,7 +305,7 @@ describe('cached', () => {
           calls++
           return o.id
         },
-        { mode: 'identity' }
+        { objectArgFingerprintStrategy: 'identity' }
       )
 
       expect(cachedFunction(obj)).toBe(1)
@@ -323,7 +323,7 @@ describe('cached', () => {
     })
   })
 
-  describe('structural mode', () => {
+  describe('structural strategy', () => {
     it('should share one entry for structurally-equal distinct objects', () => {
       let calls = 0
       const cachedFunction = cached(
@@ -331,10 +331,10 @@ describe('cached', () => {
           calls++
           return o.id
         },
-        { mode: 'structural' }
+        { objectArgFingerprintStrategy: 'structural' }
       )
 
-      // distinct references, equal shape -> single entry (unlike identity mode)
+      // distinct references, equal shape -> single entry (unlike identity strategy)
       expect(cachedFunction({ id: 1 })).toBe(1)
       expect(cachedFunction({ id: 1 })).toBe(1)
       expect(calls).toBe(1)
@@ -347,7 +347,7 @@ describe('cached', () => {
           calls++
           return o.id
         },
-        { mode: 'structural' }
+        { objectArgFingerprintStrategy: 'structural' }
       )
 
       expect(cachedFunction({ id: 1 })).toBe(1)
@@ -362,13 +362,13 @@ describe('cached', () => {
           calls++
           return o.id
         },
-        { mode: 'structural' }
+        { objectArgFingerprintStrategy: 'structural' }
       )
 
       expect(cachedFunction({ id: 1 })).toBe(1)
       expect(calls).toBe(1)
 
-      // a different reference with the same shape evicts the entry in structural mode
+      // a different reference with the same shape evicts the entry in structural strategy
       cachedFunction.evict({ id: 1 })
       expect(cachedFunction({ id: 1 })).toBe(1)
       expect(calls).toBe(2) // recomputed
@@ -408,7 +408,7 @@ describe('cached', () => {
           calls++
           return o.n
         },
-        { mode: 'structural' }
+        { objectArgFingerprintStrategy: 'structural' }
       )
 
       // keying is total: a nested BigInt is tagged by its string form (like a
@@ -711,14 +711,14 @@ describe('cached', () => {
       expect(calls).toBe(2)
     })
 
-    it('should not collide an identity-mode object id with an equal numeric primitive', () => {
+    it('should not collide an identity-strategy object id with an equal numeric primitive', () => {
       let calls = 0
       const cachedFunction = cached(
         (a: unknown) => {
           calls++
           return typeof a === 'object' ? 'from-object' : 'from-number'
         },
-        { mode: 'identity' }
+        { objectArgFingerprintStrategy: 'identity' }
       )
 
       // a fresh object is keyed by an internal integer identity id; a numeric
@@ -728,7 +728,7 @@ describe('cached', () => {
       expect(calls).toBe(2)
     })
 
-    it('should still share one entry for equal-shape distinct object refs in structural mode', () => {
+    it('should still share one entry for equal-shape distinct object refs in structural strategy', () => {
       let calls = 0
       const cachedFunction = cached((o: { id: number }) => {
         calls++
@@ -743,7 +743,7 @@ describe('cached', () => {
     })
   })
 
-  describe('structural mode key canonicalization', () => {
+  describe('structural strategy key canonicalization', () => {
     it('should treat top-level property order as irrelevant', () => {
       let calls = 0
       const cachedFunction = cached((o: { a: number; b: number }) => {
@@ -751,7 +751,7 @@ describe('cached', () => {
         return o.a + o.b
       })
 
-      // structural mode is the default; the canonical key sorts properties so
+      // structural strategy is the default; the canonical key sorts properties so
       // insertion order cannot fork the entry
       expect(cachedFunction({ a: 1, b: 2 })).toBe(3)
       expect(cachedFunction({ b: 2, a: 1 })).toBe(3)
