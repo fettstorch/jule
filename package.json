@@ -8,6 +8,7 @@
     "build": "bun run --filter @fettstorch/jule build",
     "test": "bun run --filter @fettstorch/jule test",
     "test:pack": "bun run scripts/verify-package.ts",
+    "test:published": "bun run scripts/verify-published.ts",
     "sync:readme": "bun run scripts/sync-readme.ts",
     "test:all": "bun run scripts/sync-readme.ts --check && bun run test && bun run test:pack",
     "format": "oxfmt",

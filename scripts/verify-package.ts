@@ -20,7 +20,7 @@ import { $ } from 'bun'
 
 const root = dirname(import.meta.dir)
 const lib = join(root, 'packages/jule')
-const consumer = join(root, 'apps/consumer')
+const consumer = join(root, 'apps/local-consumer')
 const tarball = join(consumer, 'jule.tgz')
 
 // Clear any prior tarball so the rename below is unambiguous.

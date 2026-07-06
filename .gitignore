@@ -6,8 +6,9 @@ out/
 
 # Packaging (gold-standard verify)
 *.tgz
-# consumer install is regenerated on every `test:pack` run
-apps/consumer/bun.lock
+# consumer installs are regenerated on every verify run
+apps/local-consumer/bun.lock
+apps/published-consumer/bun.lock
 
 # Dependencies
 node_modules/

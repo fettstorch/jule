@@ -1,7 +1,7 @@
 {
-  "name": "consumer",
+  "name": "local-consumer",
   "private": true,
-  "description": "Test-only consumer that installs the packed @fettstorch/jule tarball to prove the published package is usable.",
+  "description": "Test-only consumer that installs the locally packed @fettstorch/jule tarball to prove the about-to-be-published package is usable.",
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",

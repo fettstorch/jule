@@ -1,0 +1,16 @@
+{
+  "name": "published-consumer",
+  "private": true,
+  "description": "Test-only consumer that installs the most recently published @fettstorch/jule from the npm registry to prove the released package is usable.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@fettstorch/jule": "latest"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}
